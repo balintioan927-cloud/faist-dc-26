@@ -1,4 +1,5 @@
 import type { ImagePickerAsset } from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase } from './supabase';
 
 export type Visibility = 'public' | 'followers' | 'private';
@@ -191,24 +192,24 @@ export async function createPost(
   let imagePath: string | null = null;
 
   if (asset) {
-    const response = await fetch(asset.uri);
+    // Normalize HEIC and other phone formats to JPEG so photos display
+    // consistently on both iPhone and Android.
+    const image = ImageManipulator.manipulate(asset.uri);
+    image.resize({ width: asset.width > 0 ? Math.min(asset.width, 2048) : 2048 });
+    const rendered = await image.renderAsync();
+    const normalized = await rendered.saveAsync({
+      format: ImageManipulator.SaveFormat.JPEG,
+      compress: 0.84,
+    });
+    const response = await fetch(normalized.uri);
     if (!response.ok) throw new Error('Fotografia nu a putut fi citită.');
     const file = await response.arrayBuffer();
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    const contentType = asset.mimeType && allowedTypes.includes(asset.mimeType)
-      ? asset.mimeType
-      : 'image/jpeg';
-    const extension = contentType === 'image/png'
-      ? 'png'
-      : contentType === 'image/webp'
-        ? 'webp'
-        : 'jpg';
-    imagePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${extension}`;
+    imagePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.jpg`;
 
     const { error: uploadError } = await c.storage
       .from('faist-photos')
       .upload(imagePath, file, {
-        contentType,
+        contentType: 'image/jpeg',
         cacheControl: '3600',
         upsert: false,
       });

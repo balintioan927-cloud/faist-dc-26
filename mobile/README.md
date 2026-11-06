@@ -36,7 +36,7 @@ Pentru testare pe iPhone sau Android folosește un development build compatibil 
 - Validare locală a parolei: minimum 12 caractere, literă mică, literă mare, cifră și simbol
 - Sesiune păstrată în Expo SecureStore, cu împărțirea tokenului în fragmente mici criptate pentru compatibilitate cu limitele platformelor
 - Feed cu postări accesibile conform politicilor RLS
-- Încărcare fotografie în bucket privat `faist-photos`
+- Încărcare fotografie în bucket privat `faist-photos`, cu normalizare automată HEIC/PNG/WebP la JPEG pentru compatibilitate între iPhone și Android
 - Vizibilitate postare: public, urmăritori sau privat
 - Buton unic de confirmare/retragere a aprecierii
 - Comentarii
