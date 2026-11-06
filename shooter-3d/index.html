@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>DC Strike 3D — Demo</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090d14;font-family:Arial,sans-serif}canvas{display:block}
+#hud{position:fixed;inset:0;pointer-events:none;color:#fff;text-shadow:0 2px 8px #000}
+.top{display:flex;justify-content:space-between;padding:16px;gap:10px}.panel{background:#101a2bd9;border:1px solid #54708b88;border-radius:12px;padding:10px 14px;font-weight:700;backdrop-filter:blur(8px)}#health{color:#ff7474}#ammo{color:#8fe8ff}
+#cross{position:absolute;left:50%;top:50%;width:18px;height:18px;transform:translate(-50%,-50%)}#cross:before,#cross:after{content:"";position:absolute;background:#dffaff;box-shadow:0 0 7px #5deaff}#cross:before{width:2px;height:18px;left:8px}#cross:after{height:2px;width:18px;top:8px}
+#bottom{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);text-align:center;font-size:12px;color:#c6d6e8}
+#overlay{position:fixed;inset:0;background:linear-gradient(135deg,#07101deF,#101d2eef);display:grid;place-items:center;color:white;text-align:center;padding:24px;z-index:5}
+.card{max-width:440px;background:#142238;border:1px solid #54708b88;border-radius:22px;padding:28px;box-shadow:0 20px 80px #0009}.card h1{font-size:clamp(30px,8vw,48px);margin:0 0 8px;letter-spacing:1px}.card p{color:#c5d3e3;line-height:1.5}.btn{border:0;border-radius:12px;padding:14px 24px;background:#4ed9ed;color:#06202a;font-weight:900;font-size:16px}
+#mobile{position:fixed;inset:auto 0 22px;display:none;justify-content:space-between;padding:0 20px;pointer-events:none}#pad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,48px);gap:5px;pointer-events:auto}#pad button,#shoot{background:#18314ccc;border:1px solid #8bbbd588;color:white;border-radius:12px;font-size:20px;touch-action:none}#shoot{width:76px;height:76px;border-radius:50%;pointer-events:auto;font-size:13px;font-weight:bold}
+@media(pointer:coarse){#mobile{display:flex}#bottom{bottom:115px}}
+</style>
+</head>
+<body>
+<div id="hud"><div class="top"><div class="panel">❤️ <span id="health">100</span></div><div class="panel">ȚINTE <span id="score">0</span>/8</div><div class="panel">⚡ <span id="ammo">24</span></div></div><div id="cross"></div><div id="bottom">WASD / săgeți · click pentru țintire · SPACE pentru foc</div></div>
+<div id="mobile"><div id="pad"><span></span><button data-move="forward">▲</button><span></span><button data-move="left">◀</button><button data-move="back">▼</button><button data-move="right">▶</button></div><button id="shoot">FOC</button></div>
+<div id="overlay"><div class="card"><h1>DC STRIKE 3D</h1><p>Un shooter 3D la persoana întâi. Elimină cele 8 ținte de antrenament și termină nivelul. Acesta este un joc DEMO, fără conturi.</p><p>Calculator: WASD + mouse. Telefon: butoanele de mișcare și FOC.</p><button class="btn" id="start">ÎNCEPE JOCUL</button></div></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x91b5c8);scene.fog=new THREE.Fog(0x91b5c8,22,65);
+const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,100);camera.position.set(0,1.7,9);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;document.body.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xd9f1ff,0x39434d,2));const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-8,14,8);sun.castShadow=true;scene.add(sun);
+const mat=(c,r=.8)=>new THREE.MeshStandardMaterial({color:c,roughness:r});
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(90,90),mat(0x59666a));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+const grid=new THREE.GridHelper(90,45,0x91a3a6,0x718487);grid.position.y=.012;scene.add(grid);
+function box(x,y,z,sx,sy,sz,color){const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mat(color));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);return m}
+for(let i=-1;i<=1;i++){box(i*13,2,-16,8,4,1,0x65757a);box(i*13,2,19,8,4,1,0x65757a)}
+for(let i=0;i<10;i++){const x=(i%5-2)*7,z=-4-Math.floor(i/5)*10;box(x,.8,z,1.6,1.6,1.6,0x687b7b)}
+// A clearly fictional energy blaster, attached to the camera.
+const gun=new THREE.Group();const body= new THREE.Mesh(new THREE.BoxGeometry(.22,.2,.62),mat(0x24384b));body.position.set(.36,-.28,-.58);gun.add(body);const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.055,.07,.34,12),mat(0x58dbea));barrel.rotation.x=Math.PI/2;barrel.position.set(.36,-.23,-.95);gun.add(barrel);const grip=new THREE.Mesh(new THREE.BoxGeometry(.12,.25,.16),mat(0x172331));grip.position.set(.36,-.46,-.48);gun.add(grip);camera.add(gun);scene.add(camera);
+const targets=[];const targetMat=mat(0xd75d46);const dark=mat(0x263846);const glow=mat(0x6df0ff,.3);
+for(let i=0;i<8;i++){const g=new THREE.Group();const x=(i%4-1.5)*5.1,z=-8-Math.floor(i/4)*10;g.position.set(x,0,z);const torso=new THREE.Mesh(new THREE.BoxGeometry(.8,1.15,.42),targetMat);torso.position.y=1.25;torso.castShadow=true;g.add(torso);const head=new THREE.Mesh(new THREE.SphereGeometry(.34,16,12),dark);head.position.y=2.08;g.add(head);const eye=new THREE.Mesh(new THREE.BoxGeometry(.35,.07,.05),glow);eye.position.set(0,2.1,-.3);g.add(eye);const legs=new THREE.Mesh(new THREE.BoxGeometry(.62,.65,.34),dark);legs.position.y=.38;g.add(legs);g.userData.hit=false;scene.add(g);targets.push(g)}
+const ray=new THREE.Raycaster();let score=0,ammo=24,health=100,started=false,locked=false;const keys={};const scoreEl=document.querySelector('#score'),ammoEl=document.querySelector('#ammo'),healthEl=document.querySelector('#health'),overlay=document.querySelector('#overlay');
+function updateHud(){scoreEl.textContent=score;ammoEl.textContent=ammo;healthEl.textContent=health}
+function fire(){if(!started||ammo<=0)return;ammo--;updateHud();ray.setFromCamera(new THREE.Vector2(0,0),camera);const hits=ray.intersectObjects(targets.filter(t=>!t.userData.hit).flatMap(t=>t.children),false);if(hits.length){let o=hits[0].object;while(o.parent&&!targets.includes(o))o=o.parent;if(targets.includes(o)){o.userData.hit=true;o.visible=false;score++;updateHud();if(score===8){overlay.style.display='grid';overlay.querySelector('h1').textContent='NIVEL COMPLETAT!';overlay.querySelector('p').textContent='Ai eliminat toate țintele. Scor: 8/8.';overlay.querySelector('button').textContent='JOACĂ DIN NOU';started=false;document.exitPointerLock?.()}}}}
+document.querySelector('#start').addEventListener('click',()=>{if(score===8){score=0;ammo=24;health=100;targets.forEach(t=>{t.visible=true;t.userData.hit=false});updateHud()}overlay.style.display='none';started=true;renderer.domElement.requestPointerLock?.()});
+renderer.domElement.addEventListener('click',()=>{if(started&&!matchMedia('(pointer:coarse)').matches){if(!locked)renderer.domElement.requestPointerLock?.();else fire()}});
+document.addEventListener('pointerlockchange',()=>locked=document.pointerLockElement===renderer.domElement);
+document.addEventListener('mousemove',e=>{if(!locked)return;camera.rotation.order='YXZ';camera.rotation.y-=e.movementX*.0022;camera.rotation.x-=e.movementY*.0022;camera.rotation.x=Math.max(-1.35,Math.min(1.35,camera.rotation.x))});
+document.addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Space'){e.preventDefault();fire()}});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+document.querySelectorAll('[data-move]').forEach(b=>{const k=b.dataset.move;b.addEventListener('pointerdown',e=>{e.preventDefault();keys[k]=true});['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false))});
+document.querySelector('#shoot').addEventListener('pointerdown',e=>{e.preventDefault();fire()});
+let last=performance.now();function animate(now){requestAnimationFrame(animate);const dt=Math.min((now-last)/1000,.05);last=now;if(started){const speed=5*dt;const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();const right=new THREE.Vector3().crossVectors(forward,camera.up).normalize();let f=0,s=0;if(keys.KeyW||keys.ArrowUp||keys.forward)f++;if(keys.KeyS||keys.ArrowDown||keys.back)f--;if(keys.KeyD||keys.ArrowRight||keys.right)s++;if(keys.KeyA||keys.ArrowLeft||keys.left)s--;camera.position.addScaledVector(forward,f*speed);camera.position.addScaledVector(right,s*speed);camera.position.x=THREE.MathUtils.clamp(camera.position.x,-21,21);camera.position.z=THREE.MathUtils.clamp(camera.position.z,-22,14);camera.position.y=1.7;gun.position.y=Math.sin(now*.008)*.008}}renderer.render(scene,camera)}requestAnimationFrame(animate);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body></html>
