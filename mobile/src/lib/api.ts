@@ -77,13 +77,24 @@ export async function signUp(
   username: string,
   fullName: string,
 ) {
+  const passwordProblem = validateStrongPassword(password);
+  if (passwordProblem) throw new Error(passwordProblem);
+
+  const normalizedUsername = username.trim().toLowerCase();
+  if (!validateUsername(normalizedUsername)) {
+    throw new Error('Username-ul trebuie să aibă 3–30 caractere: litere mici, cifre, punct, cratimă sau underscore.');
+  }
+
+  const normalizedFullName = fullName.trim();
+  if (!normalizedFullName) throw new Error('Numele complet este obligatoriu.');
+
   return client().auth.signUp({
     email: email.trim().toLowerCase(),
     password,
     options: {
       data: {
-        username: username.trim().toLowerCase(),
-        full_name: fullName.trim(),
+        username: normalizedUsername,
+        full_name: normalizedFullName.slice(0, 80),
       },
     },
   });
@@ -115,6 +126,7 @@ export async function updateMyProfile(
   fullName: string,
   bio: string,
 ) {
+  if (!fullName.trim()) throw new Error('Numele complet nu poate fi gol.');
   const { error } = await client()
     .from('profiles')
     .update({
@@ -189,6 +201,9 @@ export async function createPost(
   asset: ImagePickerAsset | null,
 ) {
   const c = client();
+  if (!body.trim() && !asset) {
+    throw new Error('Adaugă o fotografie sau un text înainte de publicare.');
+  }
   let imagePath: string | null = null;
 
   if (asset) {
@@ -205,6 +220,9 @@ export async function createPost(
     const response = await fetch(normalized.uri);
     if (!response.ok) throw new Error('Fotografia nu a putut fi citită.');
     const file = await response.arrayBuffer();
+    if (file.byteLength > 10 * 1024 * 1024) {
+      throw new Error('Fotografia optimizată depășește limita de 10 MB.');
+    }
     imagePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.jpg`;
 
     const { error: uploadError } = await c.storage
@@ -286,6 +304,7 @@ export async function fetchComments(postId: string): Promise<Comment[]> {
 }
 
 export async function addComment(postId: string, userId: string, body: string) {
+  if (!body.trim()) throw new Error('Comentariul nu poate fi gol.');
   const { error } = await client().from('post_comments').insert({
     post_id: postId,
     author_id: userId,
@@ -294,31 +313,20 @@ export async function addComment(postId: string, userId: string, body: string) {
   if (error) throw error;
 }
 
-export async function startConversation(username: string, userId: string) {
-  const c = client();
-  const { data: target, error: targetError } = await c
-    .from('profiles')
-    .select('id')
-    .eq('username', username.trim().toLowerCase())
-    .single();
-  if (targetError) throw targetError;
-  if (!target || target.id === userId) {
-    throw new Error('Alege un alt utilizator.');
+export async function startConversation(username: string) {
+  const normalizedUsername = username.trim().toLowerCase();
+  if (!validateUsername(normalizedUsername)) {
+    throw new Error('Introdu un username valid.');
   }
 
-  const { data: conversation, error: conversationError } = await c
-    .from('conversations')
-    .insert({ created_by: userId })
-    .select('id')
-    .single();
-  if (conversationError) throw conversationError;
-
-  const { error: membersError } = await c.from('conversation_members').insert([
-    { conversation_id: conversation.id, user_id: userId },
-    { conversation_id: conversation.id, user_id: target.id },
-  ]);
-  if (membersError) throw membersError;
-  return conversation.id as string;
+  const { data, error } = await client().rpc('create_faist_direct_conversation', {
+    p_target_username: normalizedUsername,
+  });
+  if (error) throw error;
+  if (typeof data !== 'string') {
+    throw new Error('Conversația nu a putut fi creată.');
+  }
+  return data;
 }
 
 export async function fetchConversations(userId: string): Promise<Conversation[]> {
@@ -334,7 +342,7 @@ export async function fetchConversations(userId: string): Promise<Conversation[]
   const [{ data: members, error: membersError }, { data: messages, error: messagesError }] =
     await Promise.all([
       c.from('conversation_members').select('conversation_id, user_id').in('conversation_id', ids),
-      c.from('direct_messages').select('conversation_id, body, created_at').in('conversation_id', ids).order('created_at', { ascending: false }),
+      c.from('direct_messages').select('conversation_id, body, created_at').in('conversation_id', ids).order('created_at', { ascending: false }).limit(100),
     ]);
   if (membersError) throw membersError;
   if (messagesError) throw messagesError;
@@ -377,6 +385,7 @@ export async function sendMessage(
   senderId: string,
   body: string,
 ) {
+  if (!body.trim()) throw new Error('Mesajul nu poate fi gol.');
   const { error } = await client().from('direct_messages').insert({
     conversation_id: conversationId,
     sender_id: senderId,
