@@ -277,7 +277,7 @@ function AppContent() {
     if (!session || !newChatUsername.trim()) return;
     setBusy(true);
     try {
-      const id = await startConversation(newChatUsername, session.user.id);
+      const id = await startConversation(newChatUsername);
       setNewChatUsername('');
       await loadConversationList();
       setSelectedConversation(id);
