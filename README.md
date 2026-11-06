@@ -1,30 +1,15 @@
-# FAIST DC 26 — Demo local
+# FAIST DC 26
 
-Demo de aplicație socială pentru Android/iPhone și desktop, realizat ca prototip web responsive. Nu necesită Supabase, conturi externe sau instalare de dependențe.
+Proiectul are două părți separate:
 
-## Cum îl deschizi
-1. Descarcă și dezarhivează `faist-dc-26-demo.zip`.
-2. Deschide `index.html` într-un browser modern.
-3. Pentru experiență de testare recomand Chrome, Safari sau Edge.
+- **Demo web** — fișierele `index.html`, `styles.css` și `app.js` din rădăcină. Acesta rămâne prototipul web local publicat pe Render și folosește stocare locală în browser.
+- **Aplicație mobilă** — proiectul Expo / React Native din `mobile/`, pregătit pentru Android și iPhone.
+- **Backend** — migrarea Supabase și politicile RLS din `supabase/`.
 
-## Conturi demonstrative
-- alex@faist.demo / demo12345
-- mara@faist.demo / demo12345
-- david@faist.demo / demo12345
+## Stadiul actual
 
-Poți folosi și „Intră ca vizitator demo”.
+Codul nativ și schema de backend sunt pregătite în repository. Aplicația mobilă nu este încă legată de un proiect Supabase dedicat: nu există fișier `.env` în Git și nu a fost publicată o versiune Android/iOS.
 
-## Funcții
-- Splash logo FAIST DC 26
-- Login și creare cont locală
-- Feed cu postări demonstrative
-- Publicare fotografie din dispozitiv (max. 6 MB)
-- Comentarii la postări
-- Buton unic de confirmare/retragere a reacției
-- Profil editabil
-- Mesaje demonstrative între utilizatori
-- Vizibilitate postare: public, urmăritori, privat
-- Salvare locală în browser prin localStorage
+Vezi [instrucțiunile aplicației mobile](mobile/README.md) și [instrucțiunile Supabase](supabase/README.md).
 
-## Limite importante
-Acesta este un demo local. Nu este o rețea socială publică, conturile și mesajele nu sunt sincronizate între dispozitive, iar datele nu sunt protejate de un server. Nu folosi parole reale. Fotografiile adăugate pot ocupa spațiu în stocarea browserului. Butoanele și fluxurile sunt pentru demonstrație, nu pentru lansare în producție.
+**Important:** demo-ul web existent nu devine automat o aplicație mobilă și nu sincronizează conturi sau fotografii cu backend-ul. Conectarea reală se face din proiectul Expo, după crearea și configurarea proiectului Supabase dedicat FAIST DC 26.

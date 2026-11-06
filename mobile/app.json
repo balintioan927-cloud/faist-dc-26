@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "FAIST DC 26",
+    "slug": "faist-dc-26",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "faistdc26",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#080D18",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.faistdc26.mobile"
+    },
+    "android": {
+      "package": "com.faistdc26.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#080D18"
+      }
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FAIST DC 26 are nevoie de acces la fotografiile selectate pentru a le publica.",
+          "cameraPermission": "FAIST DC 26 are nevoie de acces la cameră pentru fotografii."
+        }
+      ]
+    ]
+  }
+}
