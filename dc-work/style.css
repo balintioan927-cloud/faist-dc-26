@@ -20,3 +20,25 @@
 .auth-demo{width:100%;border:1px solid #ded9ed;border-radius:11px;background:#fff;color:#4e3a9c;padding:13px;font-weight:700}
 .auth-foot{margin-top:16px}
 @media(max-height:720px){.auth-gate{align-items:flex-start}.auth-card{margin:auto 0}}
+
+/* Demo stories, comments and star reactions */
+.actions .like{font-size:28px;line-height:1;color:#333;min-width:28px}
+.actions .like.liked{color:#f0a400}
+.comments-area{padding:0 13px 12px}
+.comment-list{max-height:150px;overflow:auto}
+.comment-line{font-size:13px;margin:7px 0;color:#444;overflow-wrap:anywhere}
+.comment-line b{margin-right:5px;color:#25212f}
+.comment-form{display:flex;gap:8px;align-items:center;border-top:1px solid #f0f0f0;padding-top:9px;margin-top:8px}
+.comment-form input{min-width:0;flex:1;border:0;outline:0;font-size:13px;padding:8px 0;background:transparent}
+.comment-form button{border:0;background:none;color:#7255df;font-size:13px;font-weight:750;padding:8px 2px}
+.story{cursor:pointer}
+.story-viewer{position:fixed;inset:0;z-index:60;background:#09070deF;display:flex;align-items:center;justify-content:center;padding:12px}
+.story-viewer-card{position:relative;width:min(100%,420px);height:min(86dvh,760px);border-radius:16px;overflow:hidden;background:#7955df;color:white;display:flex;flex-direction:column;box-shadow:0 12px 55px #0008}
+.story-progress{height:3px;background:#ffffff65;margin:12px 12px 8px;border-radius:10px;overflow:hidden}
+.story-progress span{display:block;height:100%;background:white;width:25%;transition:width .2s}
+.story-user{font-size:14px;font-weight:750;padding:8px 16px;text-shadow:0 1px 5px #0004}
+.story-content{flex:1;display:grid;place-items:center;text-align:center;padding:35px;font-size:30px;font-weight:850;text-shadow:0 2px 12px #0003}
+.story-close,.story-prev,.story-next{position:absolute;border:0;color:white;background:#0004;border-radius:50%;z-index:2}
+.story-close{right:12px;top:26px;width:34px;height:34px;font-size:25px;line-height:1}
+.story-prev,.story-next{top:50%;width:36px;height:48px;font-size:34px;transform:translateY(-50%);border-radius:10px}
+.story-prev{left:8px}.story-next{right:8px}
