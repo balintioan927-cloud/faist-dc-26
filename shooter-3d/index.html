@@ -18,10 +18,10 @@
 <body>
 <div id="hud"><div class="top"><div class="panel">❤️ <span id="health">100</span></div><div class="panel">ȚINTE <span id="score">0</span>/8</div><div class="panel">⚡ <span id="ammo">24</span></div></div><div id="cross"></div><div id="bottom">WASD / săgeți · click pentru țintire · SPACE pentru foc</div></div>
 <div id="mobile"><div id="pad"><span></span><button data-move="forward">▲</button><span></span><button data-move="left">◀</button><button data-move="back">▼</button><button data-move="right">▶</button></div><button id="shoot">FOC</button></div>
-<div id="overlay"><div class="card"><h1>DC STRIKE 3D</h1><p>Un shooter 3D la persoana întâi. Elimină cele 8 ținte de antrenament și termină nivelul. Acesta este un joc DEMO, fără conturi.</p><p>Calculator: WASD + mouse. Telefon: butoanele de mișcare și FOC.</p><button class="btn" id="start">ÎNCEPE JOCUL</button></div></div>
+<div id="overlay"><div class="card"><h1>DC STRIKE 3D</h1><p>Un shooter 3D la persoana întâi. Elimină cele 8 ținte de antrenament și termină nivelul. Acesta este un joc DEMO, fără conturi.</p><p>Calculator: WASD + mouse. Telefon: butoanele de mișcare și FOC.</p><button class="btn" id="start" onclick="this.textContent='SE ÎNCARCĂ...';this.disabled=true;setTimeout(()=>{if(document.querySelector('#overlay').style.display!=='none'){this.disabled=false;this.textContent='REÎNCEARCĂ';document.querySelector('#overlay p').textContent='Jocul nu s-a încărcat. Verifică conexiunea la internet și apasă Reîncearcă.'}},5000)">ÎNCEPE JOCUL</button></div></div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <script type="module">
-import * as THREE from 'three';
+let THREE;try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js')}catch(e){THREE=await import('https://unpkg.com/three@0.160.0/build/three.module.js')}
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x91b5c8);scene.fog=new THREE.Fog(0x91b5c8,22,65);
 const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,100);camera.position.set(0,1.7,9);
 const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;document.body.appendChild(renderer.domElement);
