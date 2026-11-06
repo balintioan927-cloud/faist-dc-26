@@ -23,7 +23,8 @@ create table if not exists public.posts (
   visibility text not null default 'public'
     check (visibility in ('public', 'followers', 'private')),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint posts_body_or_image_check check (char_length(body) > 0 or image_path is not null)
 );
 
 create table if not exists public.post_likes (
@@ -161,37 +162,90 @@ language sql
 stable
 security definer
 set search_path = public
-as $$
+as $
   select auth.uid() is not null and exists (
     select 1
     from public.conversation_members cm
     where cm.conversation_id = p_conversation_id
       and cm.user_id = auth.uid()
   );
-$$;
+$;
 
-create or replace function public.is_faist_conversation_creator(p_conversation_id uuid)
-returns boolean
-language sql
-stable
+create or replace function public.create_faist_direct_conversation(p_target_username text)
+returns uuid
+language plpgsql
 security definer
 set search_path = public
-as $$
-  select auth.uid() is not null and exists (
-    select 1
-    from public.conversations c
-    where c.id = p_conversation_id
-      and c.created_by = auth.uid()
-  );
-$$;
+as $
+declare
+  v_user_id uuid := auth.uid();
+  v_target_user_id uuid;
+  v_conversation_id uuid;
+begin
+  if v_user_id is null then
+    raise exception 'Authentication required' using errcode = '28000';
+  end if;
+
+  if p_target_username is null
+     or char_length(trim(p_target_username)) not between 3 and 30 then
+    raise exception 'Invalid username' using errcode = '22023';
+  end if;
+
+  select p.id
+    into v_target_user_id
+  from public.profiles p
+  where p.username = lower(trim(p_target_username));
+
+  if v_target_user_id is null then
+    raise exception 'User not found' using errcode = 'P0002';
+  end if;
+
+  if v_target_user_id = v_user_id then
+    raise exception 'Cannot message yourself' using errcode = '22023';
+  end if;
+
+  select c.id
+    into v_conversation_id
+  from public.conversations c
+  where exists (
+    select 1 from public.conversation_members cm
+    where cm.conversation_id = c.id and cm.user_id = v_user_id
+  )
+    and exists (
+      select 1 from public.conversation_members cm
+      where cm.conversation_id = c.id and cm.user_id = v_target_user_id
+    )
+    and (
+      select count(*) from public.conversation_members cm
+      where cm.conversation_id = c.id
+    ) = 2
+  order by c.created_at desc
+  limit 1;
+
+  if v_conversation_id is not null then
+    return v_conversation_id;
+  end if;
+
+  insert into public.conversations (created_by)
+  values (v_user_id)
+  returning id into v_conversation_id;
+
+  insert into public.conversation_members (conversation_id, user_id)
+  values
+    (v_conversation_id, v_user_id),
+    (v_conversation_id, v_target_user_id);
+
+  return v_conversation_id;
+end;
+$;
 
 revoke all on function public.handle_new_faist_user() from public;
 revoke all on function public.can_view_faist_post(uuid, text) from public;
 revoke all on function public.is_faist_conversation_member(uuid) from public;
-revoke all on function public.is_faist_conversation_creator(uuid) from public;
+revoke all on function public.create_faist_direct_conversation(text) from public;
 grant execute on function public.can_view_faist_post(uuid, text) to authenticated;
 grant execute on function public.is_faist_conversation_member(uuid) to authenticated;
-grant execute on function public.is_faist_conversation_creator(uuid) to authenticated;
+grant execute on function public.create_faist_direct_conversation(text) to authenticated;
 
 alter table public.profiles enable row level security;
 alter table public.posts enable row level security;
@@ -212,8 +266,8 @@ grant select, insert, update, delete on public.posts to authenticated;
 grant select, insert, delete on public.post_likes to authenticated;
 grant select, insert, delete on public.post_comments to authenticated;
 grant select, insert, delete on public.follows to authenticated;
-grant select, insert on public.conversations to authenticated;
-grant select, insert on public.conversation_members to authenticated;
+grant select on public.conversations to authenticated;
+grant select on public.conversation_members to authenticated;
 grant select, insert, delete on public.direct_messages to authenticated;
 
 create policy "FAIST authenticated profiles readable"
@@ -223,7 +277,10 @@ using (true);
 create policy "FAIST users update own profile"
 on public.profiles for update to authenticated
 using (id = auth.uid())
-with check (id = auth.uid());
+with check (
+  id = auth.uid()
+  and (avatar_path is null or (storage.foldername(avatar_path))[1] = auth.uid()::text)
+);
 
 create policy "FAIST visible posts readable"
 on public.posts for select to authenticated
@@ -231,12 +288,18 @@ using (public.can_view_faist_post(author_id, visibility));
 
 create policy "FAIST users create own posts"
 on public.posts for insert to authenticated
-with check (author_id = auth.uid());
+with check (
+  author_id = auth.uid()
+  and (image_path is null or (storage.foldername(image_path))[1] = auth.uid()::text)
+);
 
 create policy "FAIST authors update own posts"
 on public.posts for update to authenticated
 using (author_id = auth.uid())
-with check (author_id = auth.uid());
+with check (
+  author_id = auth.uid()
+  and (image_path is null or (storage.foldername(image_path))[1] = auth.uid()::text)
+);
 
 create policy "FAIST authors delete own posts"
 on public.posts for delete to authenticated
@@ -308,17 +371,9 @@ create policy "FAIST members read conversations"
 on public.conversations for select to authenticated
 using (public.is_faist_conversation_member(id));
 
-create policy "FAIST users create conversations"
-on public.conversations for insert to authenticated
-with check (created_by = auth.uid());
-
 create policy "FAIST members read conversation members"
 on public.conversation_members for select to authenticated
 using (public.is_faist_conversation_member(conversation_id));
-
-create policy "FAIST creator adds conversation members"
-on public.conversation_members for insert to authenticated
-with check (public.is_faist_conversation_creator(conversation_id));
 
 create policy "FAIST members read private messages"
 on public.direct_messages for select to authenticated
