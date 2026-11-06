@@ -111,9 +111,10 @@ begin
   v_username := lower(regexp_replace(coalesce(new.raw_user_meta_data ->> 'username', ''), '[^a-z0-9._-]', '', 'g'));
   v_username := left(v_username, 30);
 
-  if char_length(v_username) < 3
-     or exists (select 1 from public.profiles p where p.username = v_username) then
+  if char_length(v_username) < 3 then
     v_username := 'user_' || left(replace(new.id::text, '-', ''), 12);
+  elsif exists (select 1 from public.profiles p where p.username = v_username) then
+    raise exception 'Username already taken';
   end if;
 
   insert into public.profiles (id, username, full_name)

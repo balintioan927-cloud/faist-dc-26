@@ -28,7 +28,7 @@ export const secureSessionStorage = {
     } catch {
       return null;
     }
-    if (!index.generation || !Number.isInteger(index.count) || index.count < 1 || index.count > 20) {
+    if (!index.generation || !Number.isInteger(index.count) || index.count < 1 || index.count > 100) {
       return null;
     }
 
@@ -79,7 +79,7 @@ export const secureSessionStorage = {
     if (rawIndex) {
       try {
         const index = JSON.parse(rawIndex) as StorageIndex;
-        if (index.generation && Number.isInteger(index.count) && index.count > 0 && index.count <= 20) {
+        if (index.generation && Number.isInteger(index.count) && index.count > 0 && index.count <= 100) {
           for (let i = 0; i < index.count; i += 1) {
             await SecureStore.deleteItemAsync(chunkKey(key, index.generation, i));
           }
