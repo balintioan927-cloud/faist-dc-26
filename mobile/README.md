@@ -41,7 +41,7 @@ Pentru testare pe iPhone sau Android folosește un development build compatibil 
 - Buton unic de confirmare/retragere a aprecierii
 - Comentarii
 - Editare profil
-- Conversații și mesaje private
+- Conversații 1-la-1 create atomic prin RPC Supabase și mesaje private protejate de RLS
 
 ## Configurare de securitate obligatorie în Supabase
 
