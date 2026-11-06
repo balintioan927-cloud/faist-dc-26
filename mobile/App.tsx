@@ -30,6 +30,7 @@ import {
   signUp,
   startConversation,
   toggleLike,
+  toggleFollow,
   updateMyProfile,
   validateStrongPassword,
   validateUsername,
@@ -229,6 +230,16 @@ export default function App() {
     }
   }
 
+  async function handleFollow(post: FeedPost) {
+    if (!session || post.author_id === session.user.id) return;
+    try {
+      await toggleFollow(post.author_id, session.user.id, post.is_following_author);
+      await loadFeed();
+    } catch (error) {
+      showError(error);
+    }
+  }
+
   async function handleExpandComments(postId: string) {
     if (expandedPost === postId) {
       setExpandedPost(null);
@@ -260,8 +271,9 @@ export default function App() {
     try {
       const id = await startConversation(newChatUsername, session.user.id);
       setNewChatUsername('');
-      setSelectedConversation(id);
       await loadConversationList();
+      setSelectedConversation(id);
+      await loadConversationMessages(id);
     } catch (error) {
       showError(error);
     } finally {
@@ -393,7 +405,11 @@ export default function App() {
                     <Text style={styles.textStrong}>{post.author.full_name}</Text>
                     <Text style={styles.hint}>@{post.author.username} · {new Date(post.created_at).toLocaleString('ro-RO')}</Text>
                   </View>
-                  <Text style={styles.visibility}>{post.visibility === 'private' ? 'Privat' : post.visibility === 'followers' ? 'Urmăritori' : 'Public'}</Text>
+                  {post.author_id !== session.user.id && (
+                    <Pressable onPress={() => handleFollow(post)}>
+                      <Text style={styles.link}>{post.is_following_author ? 'Urmărești' : 'Urmărește'}</Text>
+                    </Pressable>
+                  )}
                 </View>
                 {!!post.image_url && <Image source={{ uri: post.image_url }} style={styles.postImage} resizeMode="cover" />}
                 {!!post.body && <Text style={styles.body}>{post.body}</Text>}

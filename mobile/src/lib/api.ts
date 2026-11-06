@@ -22,6 +22,7 @@ export type FeedPost = {
   image_url: string | null;
   liked_by_me: boolean;
   likes_count: number;
+  is_following_author: boolean;
 };
 
 export type Comment = {
@@ -137,15 +138,21 @@ export async function fetchFeed(userId: string): Promise<FeedPost[]> {
   const ids = rows.map((row) => row.id);
   const authorIds = [...new Set(rows.map((row) => row.author_id))];
 
-  const [{ data: profiles, error: profileError }, { data: likes, error: likesError }] =
-    await Promise.all([
-      c.from('profiles').select('id, username, full_name').in('id', authorIds),
-      c.from('post_likes').select('post_id, user_id').in('post_id', ids),
-    ]);
+  const [
+    { data: profiles, error: profileError },
+    { data: likes, error: likesError },
+    { data: follows, error: followsError },
+  ] = await Promise.all([
+    c.from('profiles').select('id, username, full_name').in('id', authorIds),
+    c.from('post_likes').select('post_id, user_id').in('post_id', ids),
+    c.from('follows').select('following_id').eq('follower_id', userId).in('following_id', authorIds),
+  ]);
   if (profileError) throw profileError;
   if (likesError) throw likesError;
+  if (followsError) throw followsError;
 
   const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+  const followingIds = new Set((follows ?? []).map((row) => row.following_id));
   const result: FeedPost[] = [];
 
   for (const row of rows) {
@@ -168,6 +175,7 @@ export async function fetchFeed(userId: string): Promise<FeedPost[]> {
       image_url: imageUrl,
       liked_by_me: postLikes.some((like) => like.user_id === userId),
       likes_count: postLikes.length,
+      is_following_author: followingIds.has(row.author_id),
     });
   }
   return result;
@@ -233,6 +241,22 @@ export async function toggleLike(postId: string, userId: string, liked: boolean)
     const { error } = await c
       .from('post_likes')
       .insert({ post_id: postId, user_id: userId });
+    if (error) throw error;
+  }
+}
+
+export async function toggleFollow(targetUserId: string, userId: string, following: boolean) {
+  if (targetUserId === userId) return;
+  const c = client();
+  if (following) {
+    const { error } = await c.from('follows')
+      .delete()
+      .eq('follower_id', userId)
+      .eq('following_id', targetUserId);
+    if (error) throw error;
+  } else {
+    const { error } = await c.from('follows')
+      .insert({ follower_id: userId, following_id: targetUserId });
     if (error) throw error;
   }
 }
