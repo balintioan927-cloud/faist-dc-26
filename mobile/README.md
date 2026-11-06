@@ -34,7 +34,7 @@ Pentru testare pe iPhone sau Android folosește un development build compatibil 
 - Autentificare Supabase prin email și parolă
 - Înregistrare deschisă, cu username și profil creat automat prin trigger SQL
 - Validare locală a parolei: minimum 12 caractere, literă mică, literă mare, cifră și simbol
-- Sesiune păstrată în Expo SecureStore
+- Sesiune păstrată în Expo SecureStore, cu împărțirea tokenului în fragmente mici criptate pentru compatibilitate cu limitele platformelor
 - Feed cu postări accesibile conform politicilor RLS
 - Încărcare fotografie în bucket privat `faist-photos`
 - Vizibilitate postare: public, urmăritori sau privat
