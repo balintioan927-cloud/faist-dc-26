@@ -194,13 +194,14 @@ export async function createPost(
   if (asset) {
     // Normalize HEIC and other phone formats to JPEG so photos display
     // consistently on both iPhone and Android.
-    const image = ImageManipulator.manipulate(asset.uri);
-    image.resize({ width: asset.width > 0 ? Math.min(asset.width, 2048) : 2048 });
-    const rendered = await image.renderAsync();
-    const normalized = await rendered.saveAsync({
-      format: ImageManipulator.SaveFormat.JPEG,
-      compress: 0.84,
-    });
+    const normalized = await ImageManipulator.manipulateAsync(
+      asset.uri,
+      [{ resize: { width: asset.width > 0 ? Math.min(asset.width, 2048) : 2048 } }],
+      {
+        format: ImageManipulator.SaveFormat.JPEG,
+        compress: 0.84,
+      },
+    );
     const response = await fetch(normalized.uri);
     if (!response.ok) throw new Error('Fotografia nu a putut fi citită.');
     const file = await response.arrayBuffer();
