@@ -1,163 +1,33 @@
-const STORE = 'faist_dc26_demo_v1';
-const demoUsers = [
-  {id:'u1',name:'Alex Marin',username:'alexmarin',email:'alex@faist.demo',password:'demo12345',bio:'Fotografie, muzică și momente reale.',initial:'A'},
-  {id:'u2',name:'Mara D.',username:'mara.d',email:'mara@faist.demo',password:'demo12345',bio:'Îmi place să surprind lumea în imagini.',initial:'M'},
-  {id:'u3',name:'David G.',username:'davidg',email:'david@faist.demo',password:'demo12345',bio:'Create. Share. Repeat.',initial:'D'}
-];
-const starterPosts = [
-  {id:'p1',userId:'u2',caption:'Uneori, liniștea spune tot. 🌌',image:'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=1200&q=85',visibility:'public',createdAt:Date.now()-3600000,likes:['u1'],comments:[{id:'c1',userId:'u1',text:'Cadru superb!'}]},
-  {id:'p2',userId:'u3',caption:'Noaptea are propriile culori.',image:'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=1200&q=85',visibility:'public',createdAt:Date.now()-7200000,likes:[],comments:[]}
-];
-let state = loadState();
+const app = document.getElementById('app');
+let registerMode = false;
 let currentUser = null;
-let currentPage = 'home';
-let commentPostId = null;
-let selectedImageData = null;
-let activeChatUser = 'u2';
-
-function loadState(){
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORE));
-    if(saved) return {...saved, users:[...demoUsers,...(saved.users||[]).filter(u=>!demoUsers.some(d=>d.id===u.id))]};
-  } catch(e){}
-  return {users:demoUsers,posts:starterPosts,messages:[]};
+let activeTab = 'feed';
+let issues = [
+  {id:1,title:'Mașina de ambalat — oprire neașteptată',machine:'Linia 03 · AM-240',area:'Producție',priority:'urgent',progress:65,owner:'Echipa mentenanță',eta:20,age:'Acum 8 min'},
+  {id:2,title:'Senzorul de poziție necesită verificare',machine:'Linia 02 · S-18',area:'Tehnic',priority:'high',progress:30,owner:'Tehnic + Inginerie',eta:30,age:'Acum 24 min'}
+];
+const posts = [
+  {name:'Andrei Pop',role:'Tehnician',initial:'AP',time:'Acum 12 min',text:'Revizia preventivă la linia 04 este finalizată. Am verificat senzorii și am făcut testul de funcționare. Linia este pregătită pentru producție.',stars:12,comments:3,tag:'MENTENANȚĂ'},
+  {name:'Maria Ionescu',role:'Operator',initial:'MI',time:'Acum 35 min',text:'Schimbul de dimineață a început bine. Mulțumesc colegilor de la calitate pentru verificarea rapidă!',stars:8,comments:2,tag:'ECHIPĂ'}
+];
+function authView(){
+ app.innerHTML = `<main class="auth-shell"><section class="auth-brand"><div class="brand-lockup"><span class="brand-symbol">F</span><span>FAIST <b>WORK</b></span></div><div class="brand-copy"><span class="eyebrow">ONE TEAM. ONE WORKFLOW.</span><h1>Lucrăm mai bine.<br><em>Împreună.</em></h1><p>Comunitatea fabricii tale, conectată într-un singur loc.</p></div><div class="brand-foot"><span class="status-dot"></span> PLATFORMĂ INTERNĂ DE ECHIPĂ</div></section><section class="auth-panel"><div class="auth-mobile-brand"><span class="brand-symbol">F</span> FAIST <b>WORK</b></div><div class="auth-card"><div class="auth-heading"><span class="eyebrow">BINE AI VENIT</span><h2 id="auth-title">${registerMode?'Alătură-te echipei':'Intră în echipă'}</h2><p id="auth-subtitle">${registerMode?'Creează profilul tău de lucru.':'Conectează-te cu contul tău FAIST WORK.'}</p></div><form id="auth-form">${registerMode?'<label>Nume și prenume<input id="real-name" placeholder="Ex. Alex Marin" required></label><label>Rol în fabrică<select id="user-role"><option>Operator</option><option>Tehnician</option><option>Inginer</option><option>Mentenanță</option><option>Calitate</option><option>Manager</option></select></label>':''}<label>Nume de utilizator<input id="username" autocomplete="username" placeholder="Numele de utilizator" required></label><label>Parolă<input id="password" type="password" placeholder="Parola ta" required minlength="4"></label><button class="primary-btn full" type="submit">${registerMode?'Creează cont':'Conectare'} <span>→</span></button><p class="form-message" id="auth-message" aria-live="polite"></p></form><div class="auth-switch"><span>${registerMode?'Ai deja un cont?':'Nu ai încă un cont?'}</span> <button id="switch-auth" type="button">${registerMode?'Conectare':'Creează cont'}</button></div><div class="demo-note"><span>ⓘ</span> Previzualizare: conturile sunt demonstrative, nu sunt încă salvate pe server.</div></div><div class="auth-legal">FAIST WORK · PREVIEW CONCEPT</div></section></main>`;
+ document.getElementById('switch-auth').onclick=()=>{registerMode=!registerMode;authView()};
+ document.getElementById('auth-form').onsubmit=e=>{e.preventDefault();const username=document.getElementById('username').value.trim();const password=document.getElementById('password').value;if(registerMode){const name=document.getElementById('real-name').value.trim();if(!name)return;currentUser={name,username,role:document.getElementById('user-role').value,initial:name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()};}else{currentUser={name:username,username,role:'Operator',initial:username.slice(0,2).toUpperCase()};}if(password.length<4){document.getElementById('auth-message').textContent='Parola trebuie să aibă cel puțin 4 caractere.';return;}renderApp()};
 }
-function persist(){localStorage.setItem(STORE,JSON.stringify(state));}
-function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function userById(id){return state.users.find(u=>u.id===id)||{name:'Utilizator',username:'user',initial:'U'};}
-function avatar(user,size=''){return `<div class="avatar ${size}" aria-label="${esc(user.name)}">${esc(user.initial||user.name?.[0]||'U')}</div>`;}
-function toast(msg){const el=document.createElement('div');el.className='toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2400);}
-function render(){
-  const app=document.getElementById('app');
-  if(!currentUser){renderAuth();return;}
-  app.innerHTML=`<div class="app-shell">
-    <header class="topbar"><div class="topbrand">FAIST <span>DC 26</span></div><div class="row">${avatar(currentUser)}<span class="small muted">${esc(currentUser.name)}</span></div></header>
-    <main class="content" id="content">${pageContent()}</main>
-    <nav class="bottom-nav">
-      ${nav('home','⌂','Acasă')}${nav('create','＋','Postează')}${nav('messages','✉','Mesaje')}${nav('profile','●','Profil')}
-    </nav>
-  </div>`;
-  bindPage();
+function navItem(id,icon,label){return `<button class="nav-item ${activeTab===id?'active':''}" data-tab="${id}"><span class="nav-icon">${icon}</span><span>${label}</span></button>`}
+function shell(content){
+ app.innerHTML=`<div class="workspace"><aside class="sidebar"><div class="brand-lockup"><span class="brand-symbol">F</span><span>FAIST <b>WORK</b></span></div><div class="workspace-label">SPAȚIUL FABRICII</div><nav>${navItem('feed','▦','Noutăți')}${navItem('issues','⚠','Probleme')}${navItem('stats','▥','Statistici')}${navItem('messages','✉','Mesaje')}</nav><div class="sidebar-bottom"><div class="mini-profile"><div class="avatar">${currentUser.initial}</div><div><b>${escapeHtml(currentUser.name)}</b><small>${escapeHtml(currentUser.role)}</small></div></div><button class="logout-btn" id="logout">Ieșire din cont ↗</button></div></aside><main class="main-area"><header class="topbar"><div><span class="eyebrow">FAIST WORK / FABRICĂ</span><h1>${activeTab==='feed'?'Comunitatea noastră':activeTab==='issues'?'Probleme în producție':activeTab==='stats'?'Performanță':'Mesaje'}</h1></div><div class="top-actions"><span class="online-pill"><i></i> Echipă activă</span><div class="avatar small-avatar">${currentUser.initial}</div></div></header><div class="page-content">${content}</div></main></div>`;
+ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{activeTab=b.dataset.tab;renderApp()});
+ document.getElementById('logout').onclick=()=>{currentUser=null;registerMode=false;authView()};
 }
-function nav(id,icon,label){return `<button class="nav-btn ${currentPage===id?'active':''}" data-page="${id}"><b>${icon}</b>${label}</button>`;}
-function renderAuth(){
-  document.getElementById('app').innerHTML=`<div class="auth-wrap"><section class="auth-card">
-    <div class="brand-small">FAIST <span>DC 26</span></div><p class="muted center">Your social world</p>
-    <div class="segmented"><button class="selected" data-auth="login">Autentificare</button><button data-auth="register">Creează cont</button></div>
-    <div id="auth-fields"></div>
-    <p class="muted center small">DEMO LOCAL · Datele rămân în acest browser</p>
-  </section></div>`;
-  document.querySelectorAll('[data-auth]').forEach(b=>b.onclick=()=>showAuth(b.dataset.auth));
-  showAuth('login');
-}
-function showAuth(mode){
-  document.querySelectorAll('[data-auth]').forEach(b=>b.classList.toggle('selected',b.dataset.auth===mode));
-  const box=document.getElementById('auth-fields');
-  if(mode==='login'){
-    box.innerHTML=`<input id="email" class="field" type="email" placeholder="Email" value="alex@faist.demo"/><input id="password" class="field" type="password" placeholder="Parolă" value="demo12345"/><button id="login" class="primary wide">Intră în cont</button><button id="demo" class="secondary wide">Intră ca vizitator demo</button><p class="muted small center">Cont demo: alex@faist.demo · demo12345</p>`;
-    document.getElementById('login').onclick=login;
-    document.getElementById('demo').onclick=()=>{currentUser=userById('u1');currentPage='home';render();};
-  } else {
-    box.innerHTML=`<input id="name" class="field" placeholder="Numele tău"/><input id="username" class="field" placeholder="Username"/><input id="email" class="field" type="email" placeholder="Email"/><input id="password" class="field" type="password" placeholder="Parolă (minim 8 caractere)"/><button id="register" class="primary wide">Creează cont</button><p class="muted small center">Contul este demonstrativ și se salvează doar pe acest dispozitiv.</p>`;
-    document.getElementById('register').onclick=register;
-  }
-}
-function login(){
-  const email=document.getElementById('email').value.trim().toLowerCase(), password=document.getElementById('password').value;
-  const user=state.users.find(u=>u.email.toLowerCase()===email&&u.password===password);
-  if(!user)return toast('Email sau parolă incorectă.');
-  currentUser=user;currentPage='home';render();
-}
-function register(){
-  const name=document.getElementById('name').value.trim(),username=document.getElementById('username').value.trim().toLowerCase(),email=document.getElementById('email').value.trim().toLowerCase(),password=document.getElementById('password').value;
-  if(!name||!username||!email||!password)return toast('Completează toate câmpurile.');
-  if(password.length<8)return toast('Parola trebuie să aibă minimum 8 caractere.');
-  if(!/^[a-z0-9_]{3,24}$/.test(username))return toast('Username: 3–24 litere, cifre sau underscore.');
-  if(state.users.some(u=>u.email.toLowerCase()===email||u.username===username))return toast('Emailul sau username-ul există deja.');
-  const user={id:'u'+Date.now(),name,username,email,password,bio:'',initial:name[0].toUpperCase()};
-  state.users.push(user);persist();currentUser=user;currentPage='home';render();toast('Cont demo creat!');
-}
-function pageContent(){
-  if(currentPage==='home')return homePage();
-  if(currentPage==='create')return createPage();
-  if(currentPage==='messages')return messagesPage();
-  if(currentPage==='profile')return profilePage();
-  if(currentPage==='comments')return commentsPage();
-  return homePage();
-}
-function homePage(){
-  const posts=state.posts.filter(p=>p.visibility==='public'||p.userId===currentUser.id||p.visibility==='followers');
-  return `<div class="welcome"><h1>Bine ai venit, ${esc(currentUser.name.split(' ')[0])} 👋</h1><div class="muted">Descoperă ce distribuie comunitatea FAIST.</div></div>
-  <div class="card"><div class="row"><div style="flex:1"><strong>Ai o fotografie de împărtășit?</strong><div class="muted small">Publică un moment nou.</div></div><button class="primary" data-goto="create">＋ Postează</button></div></div>
-  ${posts.sort((a,b)=>b.createdAt-a.createdAt).map(postCard).join('')||'<div class="empty">Nu există postări încă.</div>'}`;
-}
-function postCard(p){
-  const u=userById(p.userId), liked=p.likes.includes(currentUser.id);
-  return `<article class="card"><div class="post-head">${avatar(u)}<div><div class="post-name">${esc(u.name)}</div><div class="post-date">@${esc(u.username)} · ${new Date(p.createdAt).toLocaleString('ro-RO')}</div></div></div>
-    <img class="post-image" src="${esc(p.image)}" alt="Fotografie publicată" onerror="this.style.display='none'"/>
-    ${p.caption?`<div class="post-caption">${esc(p.caption)}</div>`:''}
-    <div class="actions"><button class="action ${liked?'confirmed':''}" data-like="${p.id}">${liked?'✓ Confirmat':'♡ Confirmă'} · ${p.likes.length}</button><button class="action" data-comments="${p.id}">Comentarii · ${p.comments.length}</button><span class="muted small right">${p.visibility==='private'?'Privat':p.visibility==='followers'?'Urmăritori':'Public'}</span></div>
-  </article>`;
-}
-function createPage(){
-  return `<h1>Publică o fotografie</h1><p class="muted">Împărtășește un moment cu comunitatea.</p>
-  <section class="card"><button class="secondary wide" id="choose-photo">▧ Alege fotografie din dispozitiv</button><img id="preview" class="photo-preview" style="display:${selectedImageData?'block':'none'}" src="${selectedImageData||''}"/>
-  <textarea id="caption" class="field" rows="3" placeholder="Scrie o descriere..."></textarea>
-  <strong>Cine poate vedea fotografia?</strong><div class="segmented"><button class="selected" data-vis="public">Public</button><button data-vis="followers">Urmăritori</button><button data-vis="private">Doar eu</button></div>
-  <button id="publish" class="primary wide">Publică fotografia</button><p class="muted small">În demo, fotografia și postarea se salvează local în browser.</p></section>`;
-}
-function messagesPage(){
-  const others=state.users.filter(u=>u.id!==currentUser.id);
-  return `<h1>Mesaje</h1><p class="muted">Conversații demonstrative între utilizatori.</p>
-  <div class="card"><label class="muted small">Alege un utilizator</label><select id="chat-user" class="field">${others.map(u=>`<option value="${u.id}" ${u.id===activeChatUser?'selected':''}>${esc(u.name)} · @${esc(u.username)}</option>`).join('')}</select><div id="chat-thread">${chatThread()}</div><div class="row"><input id="message-text" class="field" placeholder="Scrie un mesaj..."/><button id="send-message" class="primary">Trimite</button></div></div>`;
-}
-function chatThread(){
-  const msgs=state.messages.filter(m=>(m.from===currentUser.id&&m.to===activeChatUser)||(m.from===activeChatUser&&m.to===currentUser.id));
-  if(!msgs.length)return '<div class="empty">Începe conversația.</div>';
-  return `<div style="max-height:390px;overflow:auto;margin:12px 0">${msgs.map(m=>`<div class="message ${m.from===currentUser.id?'mine':''}">${esc(m.text)}<small>${m.from===currentUser.id?'Tu':esc(userById(m.from).name)} · ${new Date(m.at).toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'})}</small></div>`).join('')}</div>`;
-}
-function profilePage(){
-  const mine=state.posts.filter(p=>p.userId===currentUser.id);
-  return `<section class="card profile-hero"><div class="profile-avatar">${esc(currentUser.initial)}</div><h2>${esc(currentUser.name)}</h2><div class="muted">@${esc(currentUser.username)}</div><p class="muted">${esc(currentUser.bio||'Adaugă o descriere profilului tău.')}</p><div class="grid-two"><div><strong>${mine.length}</strong><div class="muted small">Postări</div></div><div><strong>${mine.reduce((n,p)=>n+p.likes.length,0)}</strong><div class="muted small">Aprecieri</div></div></div></section>
-  <section class="card"><h3>Editează profilul</h3><input id="profile-name" class="field" value="${esc(currentUser.name)}" placeholder="Nume"/><textarea id="profile-bio" class="field" rows="3" placeholder="Descriere">${esc(currentUser.bio||'')}</textarea><button id="save-profile" class="primary wide">Salvează</button></section>
-  <section class="card"><h3>Cont</h3><div class="muted small">Acesta este un cont local de demonstrație. Datele nu sunt publicate online.</div><button id="logout" class="danger wide">Deconectare</button></section>
-  <h3>Postările mele</h3>${mine.map(postCard).join('')||'<div class="empty">Nu ai publicat încă fotografii.</div>'}`;
-}
-function commentsPage(){
-  const p=state.posts.find(x=>x.id===commentPostId);if(!p)return '<div class="empty">Postarea nu mai există.</div>';
-  return `<button class="ghost" data-goto="home">← Înapoi la feed</button><h1>Comentarii</h1><section class="card">${p.comments.map(c=>`<div class="comment"><strong>${esc(userById(c.userId).name)}</strong><p>${esc(c.text)}</p></div>`).join('')||'<div class="empty">Fii primul care comentează.</div>'}<div class="row" style="margin-top:14px"><input id="comment-text" class="field" placeholder="Scrie un comentariu..."/><button id="send-comment" class="primary">Publică</button></div></section>`;
-}
-function bindPage(){
-  document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{currentPage=b.dataset.page;render();});
-  document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{currentPage=b.dataset.goto;render();});
-  document.querySelectorAll('[data-like]').forEach(b=>b.onclick=()=>{const p=state.posts.find(p=>p.id===b.dataset.like);if(p.likes.includes(currentUser.id))p.likes=p.likes.filter(id=>id!==currentUser.id);else p.likes.push(currentUser.id);persist();render();});
-  document.querySelectorAll('[data-comments]').forEach(b=>b.onclick=()=>{commentPostId=b.dataset.comments;currentPage='comments';render();});
-  if(currentPage==='create'){
-    let visibility='public';
-    document.getElementById('choose-photo').onclick=()=>document.getElementById('photo-picker').click();
-    document.querySelectorAll('[data-vis]').forEach(b=>b.onclick=()=>{visibility=b.dataset.vis;document.querySelectorAll('[data-vis]').forEach(x=>x.classList.toggle('selected',x===b));});
-    document.getElementById('publish').onclick=()=>{
-      if(!selectedImageData)return toast('Alege mai întâi o fotografie.');
-      state.posts.push({id:'p'+Date.now(),userId:currentUser.id,caption:document.getElementById('caption').value.trim(),image:selectedImageData,visibility,createdAt:Date.now(),likes:[],comments:[]});
-      persist();selectedImageData=null;currentPage='home';render();toast('Fotografia a fost publicată!');
-    };
-  }
-  if(currentPage==='messages'){
-    document.getElementById('chat-user').onchange=e=>{activeChatUser=e.target.value;document.getElementById('chat-thread').innerHTML=chatThread();};
-    document.getElementById('send-message').onclick=()=>{const input=document.getElementById('message-text'),text=input.value.trim();if(!text)return;state.messages.push({id:'m'+Date.now(),from:currentUser.id,to:activeChatUser,text,at:Date.now()});persist();render();};
-  }
-  if(currentPage==='profile'){
-    document.getElementById('save-profile').onclick=()=>{currentUser.name=document.getElementById('profile-name').value.trim()||currentUser.name;currentUser.bio=document.getElementById('profile-bio').value.trim();currentUser.initial=currentUser.name[0].toUpperCase();persist();render();toast('Profil salvat!');};
-    document.getElementById('logout').onclick=()=>{currentUser=null;render();};
-  }
-  if(currentPage==='comments'){
-    document.getElementById('send-comment').onclick=()=>{const input=document.getElementById('comment-text'),text=input.value.trim();if(!text)return;const p=state.posts.find(p=>p.id===commentPostId);p.comments.push({id:'c'+Date.now(),userId:currentUser.id,text});persist();render();};
-  }
-}
-document.getElementById('photo-picker').addEventListener('change',e=>{
-  const file=e.target.files?.[0];if(!file)return;
-  if(!file.type.startsWith('image/'))return toast('Alege un fișier imagine.');
-  if(file.size>6*1024*1024)return toast('Pentru demo, alege o fotografie sub 6 MB.');
-  const reader=new FileReader();reader.onload=()=>{selectedImageData=reader.result;if(currentPage==='create'){const img=document.getElementById('preview');img.src=selectedImageData;img.style.display='block';}};reader.readAsDataURL(file);
-});
-setTimeout(()=>{render();},950);
+function feedView(){return `<div class="feed-layout"><section class="feed-column"><div class="welcome-card"><div><span class="eyebrow">BUN VENIT ÎN ECHIPĂ</span><h2>Salut, ${escapeHtml(currentUser.name.split(' ')[0])}! <span>✦</span></h2><p>Ce se întâmplă astăzi în fabrică?</p></div><div class="welcome-art">✳</div></div><div class="section-head"><div><h3>Probleme care au nevoie de atenție</h3><p>Actualizări importante din producție</p></div><button class="text-btn" data-tab="issues">Vezi toate →</button></div><div class="issue-stack">${issues.filter(i=>i.progress<100).map(issueCard).join('')}</div><div class="section-head post-head"><div><h3>Noutăți din echipă</h3><p>Idei, reușite și actualizări</p></div><button class="primary-btn compact" id="new-post">＋ Postare</button></div>${posts.map(postCard).join('')}</section><aside class="right-rail"><div class="rail-card"><span class="eyebrow">ECHIPA TA</span><h3>Toți contribuim.</h3><p>Fiecare intervenție contează. Împreună ducem problemele la 100% rezolvare.</p><div class="team-metric"><b>24</b><span>colegi activi astăzi</span></div><div class="team-metric"><b>06</b><span>departamente conectate</span></div></div><div class="rail-card"><span class="eyebrow">PROGRESUL SĂPTĂMÂNII</span><div class="rail-score">78<small>%</small></div><div class="progress-track"><span style="width:78%"></span></div><p class="muted">Indicator demonstrativ de progres al producției.</p></div><div class="rail-footer">FAIST WORK <span>·</span> Lucrăm ca o echipă</div></aside></div>`}
+function issueCard(i){return `<article class="issue-card"><div class="issue-top"><span class="priority ${i.priority}"><i></i>${i.priority==='urgent'?'URGENT':'ÎN LUCRU'}</span><span class="issue-age">${i.age}</span></div><h4>${escapeHtml(i.title)}</h4><p class="issue-meta">${escapeHtml(i.machine)} <span>·</span> ${escapeHtml(i.area)}</p><div class="progress-label"><span>Progres rezolvare</span><b>${i.progress}%</b></div><div class="progress-track issue-progress"><span style="width:${i.progress}%"></span></div><div class="issue-bottom"><span>Responsabil: ${escapeHtml(i.owner)}</span><button class="text-btn" data-tab="issues">Detalii →</button></div></article>`}
+function postCard(p){return `<article class="post-card"><div class="post-author"><div class="avatar">${p.initial}</div><div><b>${escapeHtml(p.name)}</b><small>${p.role} · ${p.time}</small></div><span class="post-tag">${p.tag}</span></div><p class="post-text">${escapeHtml(p.text)}</p><div class="post-actions"><button class="star-action">☆ <span>${p.stars}</span> Apreciază</button><button>♧ ${p.comments} comentarii</button><button>↗ Distribuie</button></div></article>`}
+function issuesView(){return `<div class="page-intro"><div><h2>Urmărim fiecare oprire.</h2><p>Raportează o problemă și urmărește contribuția departamentelor până la rezolvare.</p></div><button class="primary-btn" id="report-issue">＋ Raportează o problemă</button></div><div class="issue-summary"><div><span>PROBLEME DESCHISE</span><b>${issues.filter(i=>i.progress<100).length}</b></div><div><span>REZOLVATE</span><b>${issues.filter(i=>i.progress===100).length}</b></div><div><span>PROGRES MEDIU</span><b>${issues.length?Math.round(issues.reduce((a,b)=>a+b.progress,0)/issues.length):100}%</b></div></div><div class="section-head"><div><h3>Toate sesizările</h3><p>Prioritate și progres în timp real (previzualizare)</p></div></div><div class="issue-list">${issues.map(i=>issueCard(i)+`<div class="issue-contribute"><span>Estimare inițială: ${i.eta} min</span><button class="outline-btn" data-progress="${i.id}">＋ Actualizează progresul</button></div>`).join('')||'<div class="empty-state">Nu există probleme deschise. Excelentă treabă!</div>'}</div>`}
+function statsView(){return `<div class="page-intro"><div><h2>Imaginea de ansamblu.</h2><p>Indicatori demonstrativi pentru performanța producției.</p></div><span class="date-chip">SĂPTĂMÂNA CURENTĂ</span></div><div class="stats-grid"><div class="stat-card"><span>PROGRES PRODUCȚIE</span><b>78%</b><div class="progress-track"><span style="width:78%"></span></div><small>+4,2% față de săptămâna trecută</small></div><div class="stat-card"><span>TIMP DE OPRIRE</span><b>126 <small>min</small></b><small>Total demonstrativ în această săptămână</small></div><div class="stat-card"><span>PROBLEME REZOLVATE</span><b>18</b><small>Din 23 sesizări înregistrate</small></div></div><div class="chart-card"><div class="section-head"><div><h3>Top utilaje — timp de oprire</h3><p>Date demonstrative · minute/săptămână</p></div></div>${[['Linia 03',82],['Mașina AM-240',65],['Linia 02',48],['Presa P-12',31],['Linia 04',19]].map(([n,v])=>`<div class="bar-row"><span>${n}</span><div class="bar-track"><i style="width:${v}%"></i></div><b>${v} min</b></div>`).join('')}</div>`}
+function messagesView(){return `<div class="empty-panel"><div class="empty-icon">✉</div><h2>Conversațiile echipei</h2><p>Mesajele private, trimiterea fotografiilor și apelurile audio/video vor fi conectate în etapa următoare.</p><span class="coming-soon">ÎN DEZVOLTARE</span></div>`}
+function renderApp(){let view=activeTab==='feed'?feedView():activeTab==='issues'?issuesView():activeTab==='stats'?statsView():messagesView();shell(view);const report=document.getElementById('report-issue');if(report)report.onclick=openIssueModal;const post=document.getElementById('new-post');if(post)post.onclick=()=>alert('Publicarea postărilor va fi conectată la baza de date în etapa următoare.');document.querySelectorAll('.star-action').forEach(b=>b.onclick=()=>{b.classList.toggle('selected');b.firstChild.textContent=b.classList.contains('selected')?'★ ':'☆ '});document.querySelectorAll('[data-progress]').forEach(b=>b.onclick=()=>{const id=Number(b.dataset.progress);const issue=issues.find(x=>x.id===id);const next=prompt('Introdu progresul confirmat (0–100):',issue.progress);if(next!==null&&Number.isFinite(Number(next))&&Number(next)>=0&&Number(next)<=100){issue.progress=Number(next);if(issue.progress===100)issue.priority='done';renderApp()}})}
+function openIssueModal(){const modal=document.createElement('div');modal.className='modal-backdrop';modal.innerHTML=`<form class="modal-card" id="issue-form"><button type="button" class="modal-close" aria-label="Închide">×</button><span class="eyebrow">SESIZARE NOUĂ</span><h2>Ce s-a întâmplat?</h2><p>Descrie problema pentru ca echipele responsabile să poată interveni.</p><label>Titlul problemei<input id="issue-title" required placeholder="Ex. Oprire bandă transportoare"></label><label>Utilaj / linie<input id="issue-machine" required placeholder="Ex. Linia 01 · Utilaj"></label><label>Prioritate<select id="issue-priority"><option value="urgent">Urgentă</option><option value="high">Ridicată</option></select></label><label>Estimare inițială<select id="issue-eta"><option>5</option><option>10</option><option>15</option><option>20</option><option>25</option><option>30</option></select></label><button class="primary-btn full" type="submit">Trimite sesizarea →</button></form>`;document.body.appendChild(modal);modal.querySelector('.modal-close').onclick=()=>modal.remove();modal.onclick=e=>{if(e.target===modal)modal.remove()};modal.querySelector('form').onsubmit=e=>{e.preventDefault();issues.unshift({id:Date.now(),title:document.getElementById('issue-title').value,machine:document.getElementById('issue-machine').value,area:currentUser.role,priority:document.getElementById('issue-priority').value,progress:0,owner:'Așteaptă confirmarea echipei',eta:Number(document.getElementById('issue-eta').value),age:'Chiar acum'});modal.remove();renderApp()}}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+authView();
