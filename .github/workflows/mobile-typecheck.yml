@@ -26,3 +26,5 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: TypeScript check
         run: npm run typecheck
+      - name: Expo config validation
+        run: npx expo config --type public
