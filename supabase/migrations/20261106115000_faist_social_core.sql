@@ -162,21 +162,21 @@ language sql
 stable
 security definer
 set search_path = public
-as $
+as $faist_member$
   select auth.uid() is not null and exists (
     select 1
     from public.conversation_members cm
     where cm.conversation_id = p_conversation_id
       and cm.user_id = auth.uid()
   );
-$;
+$faist_member$;
 
 create or replace function public.create_faist_direct_conversation(p_target_username text)
 returns uuid
 language plpgsql
 security definer
 set search_path = public
-as $
+as $faist_direct$
 declare
   v_user_id uuid := auth.uid();
   v_target_user_id uuid;
@@ -237,7 +237,7 @@ begin
 
   return v_conversation_id;
 end;
-$;
+$faist_direct$;
 
 revoke all on function public.handle_new_faist_user() from public;
 revoke all on function public.can_view_faist_post(uuid, text) from public;
