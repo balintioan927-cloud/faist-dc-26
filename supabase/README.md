@@ -9,9 +9,10 @@ Migrarea `migrations/20261106115000_faist_social_core.sql` definește schema pen
 - aprecieri unice per utilizator și postare
 - comentarii
 - relații de urmărire
-- conversații, membri și mesaje private
+- conversații, membri și mesaje private; RPC-ul `create_faist_direct_conversation` creează/reutilizează conversația 1-la-1 atomic, fără inserări directe din client;
 - bucket privat `faist-photos`, limită 10 MB, doar JPEG/PNG/WebP
-- politici Row Level Security pentru toate tabelele și obiectele media
+- politici Row Level Security pentru toate tabelele și obiectele media;
+- verificări care împiedică asocierea unei fotografii/avatar la o cale de stocare care aparține altui utilizator.
 - trigger care creează profilul la înregistrarea unui cont
 
 ## Aplicare
